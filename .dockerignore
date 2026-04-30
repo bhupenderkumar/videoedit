@@ -1,0 +1,16 @@
+# Use a more permissive .dockerignore for HF Space build
+node_modules
+.next
+.git
+.vercel
+output
+uploads
+tmp
+data
+screenshots
+*.log
+.env.local
+.env*.local
+.DS_Store
+README.md.bak
+test_api.py
