@@ -41,9 +41,9 @@ COPY --from=builder /app/.next/static ./.next/static
 # Make sure scratch dirs exist & are writable for non-root user
 RUN mkdir -p /tmp/uploads /tmp/output /tmp/memory && chmod -R 777 /tmp/uploads /tmp/output /tmp/memory
 
-# HF Spaces runs containers as user 1000 (`user`) with HOME=/home/user
-RUN useradd -m -u 1000 user || true
-USER user
+# HF Spaces runs containers as UID 1000.  The node base image already has a
+# `node` user at UID 1000, so reuse it instead of creating a new one.
+USER node
 
 EXPOSE 7860
 CMD ["node", "server.js"]
