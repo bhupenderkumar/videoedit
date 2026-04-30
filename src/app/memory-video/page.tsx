@@ -446,6 +446,13 @@ export default function MemoryVideoPage() {
       </div>
 
       {/* Result panel */}
+      {process.env.NEXT_PUBLIC_DEMO_MODE === "1" && (
+        <div className="mb-4 rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
+          <strong>Hosted demo:</strong> AI captions & music preview are live, but final
+          MP4 render is disabled here (requires FFmpeg). Clone the repo to render
+          locally — <code>git clone github.com/bhupenderkumar/videoedit</code>.
+        </div>
+      )}
       {result && (
         <div id="sec-result" className="mb-6 overflow-hidden rounded-2xl border border-success/40 bg-gradient-to-br from-success/10 to-primary/5 p-5 shadow-lg scroll-mt-24">
           <div className="flex items-center gap-2 text-success">

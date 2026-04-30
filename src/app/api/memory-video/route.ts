@@ -33,6 +33,19 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // Vercel serverless has no ffmpeg binary and no persistent disk — refuse here
+  // and let the user know to run renders locally (or via a worker).
+  if (process.env.VERCEL) {
+    return NextResponse.json(
+      {
+        error:
+          "Memory-video render is not available on this hosted demo. Please run the project locally to render videos.",
+        hint: "git clone https://github.com/bhupenderkumar/videoedit && npm install && npm run dev",
+      },
+      { status: 503 }
+    );
+  }
+
   const id = uuid();
   const jobDir = path.join(TMP_DIR, "memory", id);
   const photosDir = path.join(jobDir, "photos");
