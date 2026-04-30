@@ -25,11 +25,23 @@ export function getVideoMetadata(videoPath: string): VideoMetadata {
     (s: { codec_type: string }) => s.codec_type === "audio"
   );
 
+  // Safe FPS parser — replaces eval() to prevent code injection
+  let fps = 30;
+  const fpsStr = videoStream?.r_frame_rate || "30/1";
+  const fpsParts = fpsStr.split("/");
+  if (fpsParts.length === 2) {
+    const num = parseFloat(fpsParts[0]);
+    const den = parseFloat(fpsParts[1]);
+    fps = den > 0 ? num / den : 30;
+  } else {
+    fps = parseFloat(fpsStr) || 30;
+  }
+
   return {
     duration: parseFloat(data.format?.duration || "0"),
     width: videoStream?.width || 0,
     height: videoStream?.height || 0,
-    fps: eval(videoStream?.r_frame_rate || "30/1"),
+    fps,
     codec: videoStream?.codec_name || "unknown",
     audioCodec: audioStream?.codec_name || "unknown",
     fileSize: parseInt(data.format?.size || "0"),
@@ -84,6 +96,8 @@ export function renderEditedVideo(
     normalize_audio: boolean;
     aspect_ratio: string;
     resolution: string;
+    audio_settings?: unknown;
+    music_track_path?: string;
   }
 ): Promise<void> {
   return new Promise((resolve, reject) => {

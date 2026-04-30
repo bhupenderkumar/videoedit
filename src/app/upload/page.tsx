@@ -76,6 +76,7 @@ export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("instagram_reels");
   const [duration, setDuration] = useState(30);
+  const [eventType, setEventType] = useState("");
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
@@ -201,6 +202,7 @@ export default function UploadPage() {
         formData.append("title", title || "Untitled");
         formData.append("target_platform", platform);
         formData.append("target_duration", duration.toString());
+        if (eventType) formData.append("event_type", eventType);
 
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
@@ -247,6 +249,7 @@ export default function UploadPage() {
           title: title || "Untitled",
           target_platform: platform,
           target_duration: duration,
+          event_type: eventType || undefined,
           file_size: file.size,
           file_name: sanitizedName,
           storage_path: storagePath,
@@ -439,6 +442,40 @@ export default function UploadPage() {
                       {p.aspect} • ~{p.duration}s
                     </p>
                   </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Event Type */}
+          <div>
+            <label className="mb-3 block text-sm font-medium">
+              Event Type <span className="text-xs text-muted-foreground">(optional)</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+              {[
+                { id: "", label: "Auto Detect" },
+                { id: "annual_day", label: "Annual Day" },
+                { id: "sports_day", label: "Sports Day" },
+                { id: "farewell", label: "Farewell" },
+                { id: "cultural_program", label: "Cultural Program" },
+                { id: "republic_independence", label: "Republic/Independence Day" },
+                { id: "teachers_day", label: "Teachers Day" },
+                { id: "science_fair", label: "Science Fair" },
+                { id: "corporate_event", label: "Corporate Event" },
+                { id: "wedding", label: "Wedding" },
+              ].map((evt) => (
+                <button
+                  key={evt.id}
+                  onClick={() => setEventType(evt.id)}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-left text-xs font-medium transition-all",
+                    eventType === evt.id
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border hover:border-primary/30"
+                  )}
+                >
+                  {evt.label}
                 </button>
               ))}
             </div>

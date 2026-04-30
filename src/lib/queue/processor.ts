@@ -7,6 +7,7 @@ import { transcribeAudio } from "../ai/transcribe";
 import { analyzeFrames } from "../ai/analyze-frames";
 import { generateEditPlan } from "../ai/generate-edit-plan";
 import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_AUDIO_SETTINGS, type AudioSettings } from "../audio/processor";
 
 const IS_VERCEL = !!process.env.VERCEL;
 const TEMP_DIR = IS_VERCEL ? "/tmp" : (process.env.TEMP_DIR || "./tmp");
@@ -194,6 +195,15 @@ export async function processVideo(projectId: string): Promise<void> {
     // Step 7: Render
     await store.updateProject(projectId, { status: "rendering" });
     const outputPath = path.join(OUTPUT_DIR, `${projectId}.mp4`);
+
+    // Parse audio settings from project
+    let audioSettings: AudioSettings = DEFAULT_AUDIO_SETTINGS;
+    if (project.audio_settings) {
+      try {
+        audioSettings = { ...DEFAULT_AUDIO_SETTINGS, ...JSON.parse(project.audio_settings as string) };
+      } catch {}
+    }
+
     await renderEditedVideo(
       project.original_path,
       outputPath,
@@ -203,6 +213,8 @@ export async function processVideo(projectId: string): Promise<void> {
         normalize_audio: editPlan.audio_adjustments.normalize,
         aspect_ratio: editPlan.output_format.aspect_ratio,
         resolution: editPlan.output_format.resolution,
+        audio_settings: audioSettings,
+        music_track_path: project.custom_music_path || undefined,
       }
     );
 

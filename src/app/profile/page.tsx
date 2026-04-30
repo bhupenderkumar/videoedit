@@ -9,6 +9,7 @@ import {
   Building2,
   Target,
   Megaphone,
+  School,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,14 @@ export default function ProfilePage() {
   const [targetAudience, setTargetAudience] = useState("");
   const [brandTone, setBrandTone] = useState("professional");
 
+  // School-specific fields
+  const [schoolName, setSchoolName] = useState("");
+  const [schoolMotto, setSchoolMotto] = useState("");
+  const [schoolLogoUrl, setSchoolLogoUrl] = useState("");
+  const [schoolColors, setSchoolColors] = useState("");
+  const [schoolType, setSchoolType] = useState("");
+  const [establishedYear, setEstablishedYear] = useState("");
+
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -63,6 +72,12 @@ export default function ProfilePage() {
         setBrandDescription(data.profile.brand_description || "");
         setTargetAudience(data.profile.target_audience || "");
         setBrandTone(data.profile.brand_tone || "professional");
+        setSchoolName(data.profile.school_name || "");
+        setSchoolMotto(data.profile.school_motto || "");
+        setSchoolLogoUrl(data.profile.school_logo_url || "");
+        setSchoolColors(data.profile.school_colors || "");
+        setSchoolType(data.profile.school_type || "");
+        setEstablishedYear(data.profile.established_year || "");
       }
     } catch {
       // ignore
@@ -84,6 +99,12 @@ export default function ProfilePage() {
           brand_description: brandDescription,
           target_audience: targetAudience,
           brand_tone: brandTone,
+          school_name: schoolName,
+          school_motto: schoolMotto,
+          school_logo_url: schoolLogoUrl,
+          school_colors: schoolColors,
+          school_type: schoolType,
+          established_year: establishedYear,
         }),
       });
       setSaved(true);
@@ -176,6 +197,72 @@ export default function ProfilePage() {
             </div>
           </div>
         </section>
+
+        {/* School Details (shown when industry is school/education) */}
+        {(industry.includes("school") || industry.includes("education") || industry.includes("academy")) && (
+          <section className="rounded-xl border border-border bg-card p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <School className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">School Details</h2>
+                <p className="text-sm text-muted-foreground">
+                  These details enhance your video intros and branding
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">School Name</label>
+                  <input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)}
+                    placeholder="Delhi Public School" className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">School Type</label>
+                  <select value={schoolType} onChange={(e) => setSchoolType(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                    <option value="">Select type</option>
+                    <option value="cbse">CBSE</option>
+                    <option value="icse">ICSE</option>
+                    <option value="state_board">State Board</option>
+                    <option value="international">International</option>
+                    <option value="montessori">Montessori</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">School Motto</label>
+                <input type="text" value={schoolMotto} onChange={(e) => setSchoolMotto(e.target.value)}
+                  placeholder="Knowledge is Power" className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Established Year</label>
+                  <input type="text" value={establishedYear} onChange={(e) => setEstablishedYear(e.target.value)}
+                    placeholder="1985" maxLength={4} className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">School Colors</label>
+                  <input type="text" value={schoolColors} onChange={(e) => setSchoolColors(e.target.value)}
+                    placeholder="#1e40af, #dc2626" className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                  <p className="mt-1 text-xs text-muted-foreground">Comma-separated hex colors for branding</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">Logo URL</label>
+                <input type="url" value={schoolLogoUrl} onChange={(e) => setSchoolLogoUrl(e.target.value)}
+                  placeholder="https://example.com/logo.png" className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Target Audience */}
         <section className="rounded-xl border border-border bg-card p-6">

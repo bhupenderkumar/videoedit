@@ -14,6 +14,8 @@ import {
 import {
   generateMusic, mapMoodToType, MUSIC_MOODS, type MusicMood,
 } from "@/lib/music-generator";
+import { drawSlide as drawSlideFromLib } from "@/lib/slides";
+import { drawTransition as drawTransitionFromLib } from "@/lib/transitions";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -47,7 +49,7 @@ interface Props {
 // ── Royalty-free music tracks (procedurally generated) ─────────────────────
 // No external URLs — generated with Web Audio API, so no CORS/403 issues.
 
-// ── Intro/Outro slide renderer ─────────────────────────────────────────────
+// ── Intro/Outro slide renderer (delegates to lib) ──────────────────────────
 
 function drawSlide(
   ctx: CanvasRenderingContext2D,
@@ -56,112 +58,7 @@ function drawSlide(
   h: number,
   progress: number
 ) {
-  const color = slide.color || "#6d28d9";
-  const ep = Math.min(1, progress);
-
-  // Background
-  if (slide.style === "school") {
-    const grd = ctx.createLinearGradient(0, 0, 0, h);
-    grd.addColorStop(0, "#1a2e1a");
-    grd.addColorStop(0.5, "#1d3420");
-    grd.addColorStop(1, "#152a15");
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(255,255,255,0.015)";
-    for (let i = 0; i < 200; i++) {
-      const x = (Math.sin(i * 17.3 + 0.5) * 0.5 + 0.5) * w;
-      const y = (Math.cos(i * 23.7 + 0.3) * 0.5 + 0.5) * h;
-      ctx.fillRect(x, y, 1 + ((i * 7 + 3) % 5) / 5, 1 + ((i * 11 + 7) % 5) / 5);
-    }
-    ctx.strokeStyle = "#5C4033";
-    ctx.lineWidth = Math.max(8, w * 0.012);
-    ctx.strokeRect(10, 10, w - 20, h - 20);
-    ctx.strokeStyle = "#8B6914";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(14, 14, w - 28, h - 28);
-  } else if (slide.style === "bold") {
-    const grd = ctx.createLinearGradient(0, 0, w, h);
-    grd.addColorStop(0, color);
-    grd.addColorStop(0.4, "#ec4899");
-    grd.addColorStop(0.7, "#f59e0b");
-    grd.addColorStop(1, "#06b6d4");
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, w, h);
-    ctx.globalAlpha = 0.08;
-    for (let i = 0; i < 6; i++) {
-      ctx.beginPath();
-      const cx = w * (0.2 + i * 0.12), cy = h * (0.3 + Math.sin(i) * 0.2);
-      ctx.arc(cx, cy, 30 + i * 20 + ep * 20, 0, Math.PI * 2);
-      ctx.fillStyle = "#fff";
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  } else if (slide.style === "minimal") {
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, w, h);
-    const lineW = w * 0.3 * Math.min(1, ep * 2);
-    ctx.fillStyle = color;
-    ctx.fillRect(w / 2 - lineW / 2, h * 0.55, lineW, 2);
-    ctx.globalAlpha = 0.3;
-    ctx.fillRect(0, 0, w * 0.08 * Math.min(1, ep * 3), 2);
-    ctx.fillRect(0, 0, 2, h * 0.08 * Math.min(1, ep * 3));
-    ctx.fillRect(w - w * 0.08 * Math.min(1, ep * 3), h - 2, w * 0.08, 2);
-    ctx.fillRect(w - 2, h - h * 0.08 * Math.min(1, ep * 3), 2, h * 0.08);
-    ctx.globalAlpha = 1;
-  } else {
-    const grd = ctx.createRadialGradient(w / 2, h * 0.4, 0, w / 2, h / 2, w * 0.7);
-    grd.addColorStop(0, color);
-    grd.addColorStop(0.6, "#1a1a2e");
-    grd.addColorStop(1, "#09090b");
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, w, h);
-  }
-
-  // Particles
-  ctx.fillStyle = "rgba(255,255,255,0.06)";
-  for (let i = 0; i < 15; i++) {
-    const angle = ep * Math.PI * 1.5 + i * 0.7;
-    const radius = 40 + i * 18;
-    const px = w / 2 + Math.cos(angle) * radius;
-    const py = h * 0.4 + Math.sin(angle) * radius * 0.4;
-    const size = 1.5 + Math.sin(ep * 4 + i) * 1.5;
-    ctx.beginPath();
-    ctx.arc(px, py, Math.max(0.5, size), 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Title
-  const titleAlpha = Math.min(1, ep * 3);
-  const titleY = h * 0.42 + (1 - Math.min(1, ep * 2.5)) * 25;
-  const titleSize = Math.round(Math.min(w / 11, h / 7));
-  ctx.font = `700 ${titleSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = `rgba(255,255,255,${titleAlpha})`;
-  ctx.shadowColor = "rgba(0,0,0,0.4)";
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetY = 2;
-  ctx.fillText(slide.title, w / 2, titleY, w * 0.85);
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-
-  // Subtitle
-  const subAlpha = Math.max(0, Math.min(1, (ep - 0.25) * 3));
-  if (subAlpha > 0) {
-    const subSize = Math.round(Math.min(w / 22, h / 14));
-    ctx.font = `400 ${subSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`;
-    ctx.fillStyle = `rgba(255,255,255,${subAlpha * 0.7})`;
-    ctx.fillText(slide.subtitle, w / 2, titleY + titleSize * 1.2, w * 0.8);
-  }
-
-  // Fade in/out
-  if (ep < 0.12) {
-    ctx.fillStyle = `rgba(0,0,0,${1 - ep / 0.12})`;
-    ctx.fillRect(0, 0, w, h);
-  } else if (ep > 0.88) {
-    ctx.fillStyle = `rgba(0,0,0,${(ep - 0.88) / 0.12})`;
-    ctx.fillRect(0, 0, w, h);
-  }
+  drawSlideFromLib(ctx, slide as Parameters<typeof drawSlideFromLib>[1], w, h, progress);
 }
 
 // ── Caption renderer ───────────────────────────────────────────────────────
@@ -200,22 +97,10 @@ function drawCaption(ctx: CanvasRenderingContext2D, caption: EditCaption, w: num
   ctx.globalAlpha = 1;
 }
 
-// ── Transition renderer ────────────────────────────────────────────────────
+// ── Transition renderer (delegates to lib) ─────────────────────────────────
 
 function drawTransition(ctx: CanvasRenderingContext2D, type: string, progress: number, w: number, h: number) {
-  if (type === "fade_black") {
-    const alpha = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
-    ctx.fillStyle = `rgba(0,0,0,${alpha * 0.8})`;
-    ctx.fillRect(0, 0, w, h);
-  } else if (type === "crossfade") {
-    const alpha = progress < 0.5 ? progress : (1 - progress);
-    ctx.fillStyle = `rgba(0,0,0,${alpha * 0.4})`;
-    ctx.fillRect(0, 0, w, h);
-  } else if (type === "flash") {
-    const alpha = Math.sin(progress * Math.PI) * 0.5;
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-    ctx.fillRect(0, 0, w, h);
-  }
+  drawTransitionFromLib(ctx, type, progress, w, h);
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────

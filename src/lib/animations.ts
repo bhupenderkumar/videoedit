@@ -519,6 +519,12 @@ export const COLOR_PRESETS: Record<string, { label: string; filter: string; corr
   golden:     { label: "Golden Hour", filter: "sepia(0.12) saturate(1.15) brightness(1.05) hue-rotate(-3deg)", correction: { temperature: 25 } },
   pastel:     { label: "Pastel",     filter: "contrast(0.88) brightness(1.1) saturate(0.75)",           correction: { vibrance: -25, highlights: 10 } },
   dramatic:   { label: "Dramatic",   filter: "contrast(1.2) saturate(1.1) brightness(0.92)",            correction: { shadows: -20, highlights: -10 } },
+  // School-specific presets
+  school_warm:   { label: "School Warm",   filter: "sepia(0.1) saturate(1.1) brightness(1.05) contrast(1.02)", correction: { temperature: 18 } },
+  school_vibrant:{ label: "School Vibrant", filter: "saturate(1.35) contrast(1.08) brightness(1.03)",         correction: { vibrance: 35 } },
+  school_classic:{ label: "School Classic", filter: "sepia(0.15) contrast(1.02) brightness(1.0) saturate(0.95)", correction: { temperature: 12, vibrance: -10 } },
+  stage_lights:  { label: "Stage Lights",  filter: "contrast(1.25) brightness(0.95) saturate(1.1)",           correction: { shadows: -25, highlights: 10 } },
+  documentary:   { label: "Documentary",   filter: "saturate(0.85) contrast(1.05) brightness(1.0)",           correction: { vibrance: -15 } },
 };
 
 // Build CSS filter string from brightness/contrast/saturation + color grade

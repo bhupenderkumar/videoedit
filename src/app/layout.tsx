@@ -8,6 +8,8 @@ import {
   LayoutDashboard,
   User,
   ImagePlus,
+  FolderOpen,
+  Heart,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -31,8 +33,10 @@ export const viewport: Viewport = {
 };
 
 const navItems = [
+  { href: "/memory-video", label: "Memory Video", icon: Heart },
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/upload", label: "Upload", icon: Upload },
+  { href: "/albums", label: "Albums", icon: FolderOpen },
   { href: "/photos", label: "Photos", icon: ImagePlus },
   { href: "/profile", label: "Brand", icon: User },
 ];

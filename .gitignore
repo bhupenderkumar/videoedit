@@ -8,3 +8,4 @@ data/
 .env.local
 .env
 .vercel
+tsconfig.tsbuildinfo

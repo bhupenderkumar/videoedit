@@ -18,11 +18,16 @@ import {
   Volume2,
   Play,
   Pause,
+  Music,
+  ImagePlus,
 } from "lucide-react";
 import { cn, formatDuration, formatFileSize } from "@/lib/utils";
 
 const EditedVideoPlayer = dynamic(() => import("@/components/EditedVideoPlayer"), { ssr: false });
 const AIChatEditor = dynamic(() => import("@/components/AIChatEditor"), { ssr: false });
+const MusicAdvisor = dynamic(() => import("@/components/MusicAdvisor"), { ssr: false });
+const AudioMixer = dynamic(() => import("@/components/AudioMixer"), { ssr: false });
+const PhotoTimeline = dynamic(() => import("@/components/PhotoTimeline"), { ssr: false });
 
 type ProjectDetail = {
   id: string;
@@ -438,6 +443,44 @@ export default function ProjectDetailPage({
           </div>
         )}
       </div>
+
+      {/* Music & Audio Section */}
+      {project.status === "completed" && (
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 lg:mt-8">
+          {/* Music Advisor */}
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Music className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Music Advisor</h3>
+            </div>
+            <MusicAdvisor projectId={project.id} />
+          </div>
+
+          {/* Audio Settings */}
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Volume2 className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Audio Settings</h3>
+            </div>
+            <AudioMixer
+              projectId={project.id}
+              audioSettings={null}
+              onSettingsChange={() => {}}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Photo Timeline */}
+      {project.status === "completed" && (
+        <div className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6 lg:mt-8">
+          <div className="mb-4 flex items-center gap-2">
+            <ImagePlus className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">Photo Slideshow</h3>
+          </div>
+          <PhotoTimeline projectId={project.id} />
+        </div>
+      )}
 
       {/* AI Chat Editor - floating button */}
       {project.status === "completed" && project.edit_plan && (

@@ -1,5 +1,6 @@
 import type { TranscriptSegment } from "./transcribe";
 import type { FrameAnalysis } from "./analyze-frames";
+import type { SlideStyle } from "../slides";
 
 const IS_VERCEL = !!process.env.VERCEL;
 
@@ -8,11 +9,22 @@ export interface EditSegment {
   end: number;
   reason: string;
   animation?: string;
+  effects?: {
+    brightness?: number;
+    contrast?: number;
+    saturation?: number;
+    color_grade?: string;
+    speed?: number;
+  };
+  transition_in?: {
+    type: string;
+    duration: number;
+  };
 }
 
 export interface EditTransition {
   at: number;
-  type: "crossfade" | "fade_black" | "cut";
+  type: "crossfade" | "fade_black" | "cut" | "flash" | "wipe_left" | "wipe_right" | "wipe_up" | "wipe_down" | "zoom_blur" | "dissolve" | "circle_reveal" | "slide_push" | "spin";
   duration: number;
 }
 
@@ -27,8 +39,13 @@ export interface IntroSlide {
   title: string;
   subtitle: string;
   duration: number;
-  style: "gradient" | "minimal" | "bold" | "school";
+  style: SlideStyle;
   color: string;
+  event_name?: string;
+  event_date?: string;
+  school_name?: string;
+  tagline?: string;
+  animation?: "typewriter" | "fade_up" | "scale_in" | "slide_left";
 }
 
 export interface MusicSuggestion {
@@ -252,8 +269,9 @@ function buildFallbackPlan(
       title: businessName || "ClipAI Edit",
       subtitle: "Presents",
       duration: 4,
-      style: "gradient",
+      style: detectSchoolStyle(targetPlatform, businessName),
       color: "#6d28d9",
+      animation: "fade_up" as const,
     },
     outro_slide: {
       title: "Thank You!",
@@ -261,6 +279,7 @@ function buildFallbackPlan(
       duration: 3,
       style: "minimal",
       color: "#6d28d9",
+      animation: "fade_up" as const,
     },
     music_suggestion: {
       mood: "uplifting",
@@ -275,6 +294,14 @@ function buildFallbackPlan(
       saturation: 1.0,
     },
   };
+}
+
+function detectSchoolStyle(platform: string, businessName: string): SlideStyle {
+  const lower = businessName.toLowerCase();
+  if (lower.includes("school") || lower.includes("academy") || lower.includes("vidyalaya") || lower.includes("institute")) {
+    return "school";
+  }
+  return "gradient";
 }
 
 export async function generateEditPlan(
@@ -293,9 +320,14 @@ export async function generateEditPlan(
 ): Promise<EditPlan> {
   // Try LLM first, fall back to smart rule-based plan
   try {
-    const systemPrompt = `You are a professional video editor specializing in social media content for businesses and schools. Your #1 job is to pick the BEST, most engaging moments from the source video — not evenly spaced clips, but the highlights. You create engaging, platform-optimized edits with intro slides, transitions, captions, and music suggestions. Always return valid JSON.`;
+    const systemPrompt = `You are a professional video editor specializing in social media content for businesses and schools. Your #1 job is to pick the BEST, most engaging moments from the source video — not evenly spaced clips, but the highlights. You create engaging, platform-optimized edits with intro slides, transitions, captions, and music suggestions.
+For school events, you understand Indian school culture: annual days, sports days, cultural programs, farewell ceremonies, Republic/Independence Day celebrations.
+You pick appropriate slide styles, Hindi-friendly music suggestions, and culturally relevant effects.
+Always return valid JSON.`;
+    const isSchool = businessContext.industry === "education" || businessContext.businessName.toLowerCase().includes("school") || businessContext.businessName.toLowerCase().includes("academy");
     const prompt = `Create an edit plan for this video. Source video: ${videoDuration.toFixed(1)} seconds
 Business: ${businessContext.businessName} (${businessContext.industry})
+${isSchool ? "TYPE: School/Educational Institution" : ""}
 Brand tone: ${businessContext.brandTone}
 Target audience: ${businessContext.targetAudience}
 Platform: ${targetPlatform}
@@ -334,12 +366,22 @@ Rules:
 - All timestamps must be between 0 and ${videoDuration.toFixed(1)}
 - Total segment duration should be ~${targetDuration} seconds
 - segments.end must be > segments.start
-- For intro_slide style, use "school" for educational content, "gradient" for general, "bold" for energetic, "minimal" for corporate
+- For intro_slide style, choose from: "gradient", "minimal", "bold", "school", "school_chalkboard", "school_modern", "school_festive", "school_sports", "school_graduation", "school_cultural"
+  - Use "school_festive" for annual days/celebrations
+  - Use "school_sports" for sports events
+  - Use "school_graduation" for farewell/graduation
+  - Use "school_cultural" for cultural programs
+  - Use "school_modern" for general school content
+  - Use "school_chalkboard" for academic content
+  - Use "gradient" for general business
+  - Use "bold" for energetic content
+  - Use "minimal" for corporate
+- For intro_slide, you can include: event_name (e.g. "Annual Day 2026"), event_date, school_name, tagline, animation ("typewriter"|"fade_up"|"scale_in"|"slide_left")
 - For music_suggestion, suggest appropriate mood/genre based on video content and tone
 - For captions, include key moments from the transcript as subtitle_bottom and the title as title_center
 - Add "lower_third" captions for speaker names or important info
 - effects brightness/contrast/saturation should be between 0.5 and 2.0 (1.0 = no change)
-- transition types: "crossfade", "fade_black", "cut"
+- transition types: "crossfade", "fade_black", "cut", "flash", "wipe_left", "wipe_right", "wipe_up", "wipe_down", "zoom_blur", "dissolve", "circle_reveal", "slide_push", "spin"
 - For each segment, pick an animation from: "zoom_in", "zoom_out", "ken_burns", "ken_burns_reverse", "pan_left", "pan_right", "pan_up", "pan_down", "drift_left", "drift_right", "drift_up", "drift_down", "slide_in_left", "slide_in_right", "fade_in_zoom", "focus_pull", "parallax", "glide", "cinematic_bars", "dramatic_zoom", "pulse", "sway", "float", "bounce_zoom", "diagonal_tlbr", "diagonal_bltr", "rotate_cw", "rotate_ccw", "tilt", "zoom_in_rotate", "zoom_out_rotate", "reveal_scale"
 - Vary the animation per segment for visual interest
 - effects brightness/contrast/saturation defaults should be 1.0 (no artificial lighting changes unless needed)`;

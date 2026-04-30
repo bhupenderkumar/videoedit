@@ -1,22 +1,24 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ImagePlus,
-  Upload,
   Loader2,
   Download,
   Sparkles,
   X,
-  ArrowRight,
 } from "lucide-react";
 import { cn, formatFileSize } from "@/lib/utils";
 
-const enhancementTypes = [
-  { id: "auto", label: "Auto Enhance", desc: "Upscale + Sharpen + Color correct" },
-  { id: "upscale", label: "Upscale 2x", desc: "Double the resolution" },
-  { id: "color_correct", label: "Color Correct", desc: "Fix colors and exposure" },
-  { id: "sharpen", label: "Sharpen", desc: "Increase image sharpness" },
+interface Preset {
+  id: string;
+  label: string;
+  description: string;
+  category: "essential" | "tone" | "creative";
+}
+
+const FALLBACK_PRESETS: Preset[] = [
+  { id: "auto", label: "Auto Enhance", description: "Upscale + sharpen + balance", category: "essential" },
 ];
 
 type EnhancedResult = {
@@ -34,6 +36,16 @@ export default function PhotosPage() {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<EnhancedResult | null>(null);
   const [error, setError] = useState("");
+  const [presets, setPresets] = useState<Preset[]>(FALLBACK_PRESETS);
+
+  useEffect(() => {
+    fetch("/api/photos")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.presets) && d.presets.length) setPresets(d.presets);
+      })
+      .catch(() => {});
+  }, []);
 
   function handleFileSelect(selectedFile: File) {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -156,30 +168,42 @@ export default function PhotosPage() {
             {/* Enhancement Type */}
             {file && (
               <>
-                <div>
-                  <label className="mb-3 block text-sm font-medium">
-                    Enhancement Type
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-                    {enhancementTypes.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setEnhancementType(t.id)}
-                        className={cn(
-                          "rounded-lg border p-4 text-left transition-all",
-                          enhancementType === t.id
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:border-primary/30"
-                        )}
-                      >
-                        <p className="text-sm font-medium">{t.label}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {t.desc}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {(["essential", "tone", "creative"] as const).map((cat) => {
+                  const items = presets.filter((p) => p.category === cat);
+                  if (!items.length) return null;
+                  const catLabel =
+                    cat === "essential"
+                      ? "Essentials"
+                      : cat === "tone"
+                      ? "Tone & Mood"
+                      : "Creative";
+                  return (
+                    <div key={cat}>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {catLabel}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                        {items.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setEnhancementType(t.id)}
+                            className={cn(
+                              "rounded-lg border p-3 text-left transition-all",
+                              enhancementType === t.id
+                                ? "border-primary bg-primary/10 shadow-sm"
+                                : "border-border hover:border-primary/30"
+                            )}
+                          >
+                            <p className="text-sm font-medium">{t.label}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {t.description}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
 
                 {error && (
                   <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">

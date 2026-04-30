@@ -24,6 +24,11 @@ export type ProjectRow = {
   processing_started_at: string | null;
   processing_completed_at: string | null;
   error_message: string | null;
+  event_type: string | null;
+  audio_settings: string | null;
+  music_track_id: string | null;
+  custom_music_path: string | null;
+  album_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -36,6 +41,12 @@ export type ProfileRow = {
   target_audience: string;
   brand_tone: string;
   preferred_platforms: string;
+  school_name: string | null;
+  school_motto: string | null;
+  school_logo_url: string | null;
+  school_colors: string | null;
+  school_type: string | null;
+  established_year: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -72,6 +83,8 @@ function getSqliteDb() {
         id TEXT PRIMARY KEY, business_name TEXT NOT NULL, industry TEXT DEFAULT '',
         brand_description TEXT DEFAULT '', target_audience TEXT DEFAULT '',
         brand_tone TEXT DEFAULT 'professional', preferred_platforms TEXT DEFAULT '["instagram_reels"]',
+        school_name TEXT, school_motto TEXT, school_logo_url TEXT,
+        school_colors TEXT, school_type TEXT, established_year INTEGER,
         created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
       );
       CREATE TABLE IF NOT EXISTS projects (
@@ -81,8 +94,45 @@ function getSqliteDb() {
         target_platform TEXT DEFAULT 'instagram_reels', target_duration INTEGER DEFAULT 30,
         transcript TEXT, frame_analysis TEXT, edit_plan TEXT,
         duration REAL, resolution TEXT, file_size INTEGER,
+        event_type TEXT, audio_settings TEXT, music_track_id TEXT,
+        custom_music_path TEXT, album_id TEXT,
         processing_started_at TEXT, processing_completed_at TEXT, error_message TEXT,
         created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS albums (
+        id TEXT PRIMARY KEY,
+        profile_id TEXT REFERENCES business_profiles(id),
+        name TEXT NOT NULL,
+        event_type TEXT DEFAULT 'general',
+        event_date TEXT,
+        shared_config TEXT,
+        status TEXT DEFAULT 'draft',
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS album_projects (
+        album_id TEXT REFERENCES albums(id) ON DELETE CASCADE,
+        project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+        sort_order INTEGER DEFAULT 0,
+        PRIMARY KEY (album_id, project_id)
+      );
+      CREATE TABLE IF NOT EXISTS project_photos (
+        id TEXT PRIMARY KEY,
+        project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+        file_path TEXT NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        duration REAL DEFAULT 5,
+        animation TEXT DEFAULT 'ken_burns',
+        caption TEXT,
+        enhanced INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS music_suggestions (
+        id TEXT PRIMARY KEY,
+        project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+        suggestions TEXT NOT NULL,
+        reasoning TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
       );
     `);
     const count = _sqliteDb.prepare("SELECT COUNT(*) as cnt FROM business_profiles").get() as { cnt: number };
@@ -124,7 +174,7 @@ export const db = {
   },
 
   // Projects
-  async createProject(project: Omit<ProjectRow, "created_at" | "updated_at" | "transcript" | "frame_analysis" | "edit_plan" | "duration" | "resolution" | "processing_started_at" | "processing_completed_at" | "error_message">) {
+  async createProject(project: Omit<ProjectRow, "created_at" | "updated_at" | "transcript" | "frame_analysis" | "edit_plan" | "duration" | "resolution" | "processing_started_at" | "processing_completed_at" | "error_message" | "event_type" | "audio_settings" | "music_track_id" | "custom_music_path" | "album_id"> & Partial<Pick<ProjectRow, "event_type" | "audio_settings" | "music_track_id" | "custom_music_path" | "album_id">>) {
     if (IS_VERCEL) {
       await getSupabase().from("projects").insert({
         id: project.id,
@@ -183,6 +233,129 @@ export const db = {
       return;
     }
     getSqliteDb().prepare("DELETE FROM projects WHERE id = ?").run(id);
+  },
+
+  // ── Albums ──────────────────────────────────────────────────────────────
+
+  async createAlbum(album: { id: string; profile_id: string; name: string; event_type: string; event_date?: string; shared_config?: string }) {
+    if (IS_VERCEL) {
+      await getSupabase().from("albums").insert(album);
+      return;
+    }
+    getSqliteDb().prepare(
+      "INSERT INTO albums (id, profile_id, name, event_type, event_date, shared_config) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(album.id, album.profile_id, album.name, album.event_type, album.event_date || null, album.shared_config || null);
+  },
+
+  async getAlbum(id: string) {
+    if (IS_VERCEL) {
+      const { data } = await getSupabase().from("albums").select("*").eq("id", id).single();
+      return data ?? undefined;
+    }
+    return getSqliteDb().prepare("SELECT * FROM albums WHERE id = ?").get(id);
+  },
+
+  async listAlbums() {
+    if (IS_VERCEL) {
+      const { data } = await getSupabase().from("albums").select("*").order("created_at", { ascending: false });
+      return data ?? [];
+    }
+    return getSqliteDb().prepare("SELECT * FROM albums ORDER BY created_at DESC").all();
+  },
+
+  async updateAlbum(id: string, data: Record<string, unknown>) {
+    if (IS_VERCEL) {
+      await getSupabase().from("albums").update({ ...data, updated_at: new Date().toISOString() }).eq("id", id);
+      return;
+    }
+    const sets = Object.entries(data).map(([k]) => `${k} = ?`).join(", ");
+    const vals = Object.values(data);
+    getSqliteDb().prepare(`UPDATE albums SET ${sets}, updated_at = datetime('now') WHERE id = ?`).run(...vals, id);
+  },
+
+  async deleteAlbum(id: string) {
+    if (IS_VERCEL) {
+      await getSupabase().from("albums").delete().eq("id", id);
+      return;
+    }
+    getSqliteDb().prepare("DELETE FROM albums WHERE id = ?").run(id);
+  },
+
+  async addProjectToAlbum(albumId: string, projectId: string, sortOrder: number = 0) {
+    if (IS_VERCEL) {
+      await getSupabase().from("album_projects").insert({ album_id: albumId, project_id: projectId, sort_order: sortOrder });
+      return;
+    }
+    getSqliteDb().prepare("INSERT OR REPLACE INTO album_projects (album_id, project_id, sort_order) VALUES (?, ?, ?)").run(albumId, projectId, sortOrder);
+  },
+
+  async getAlbumProjects(albumId: string) {
+    if (IS_VERCEL) {
+      const { data } = await getSupabase()
+        .from("album_projects")
+        .select("project_id, sort_order")
+        .eq("album_id", albumId)
+        .order("sort_order", { ascending: true });
+      return data ?? [];
+    }
+    return getSqliteDb().prepare("SELECT project_id, sort_order FROM album_projects WHERE album_id = ? ORDER BY sort_order").all(albumId);
+  },
+
+  // ── Project Photos ──────────────────────────────────────────────────────
+
+  async addPhoto(photo: { id: string; project_id: string; file_path: string; sort_order: number; duration?: number; animation?: string; caption?: string }) {
+    if (IS_VERCEL) {
+      await getSupabase().from("project_photos").insert(photo);
+      return;
+    }
+    getSqliteDb().prepare(
+      "INSERT INTO project_photos (id, project_id, file_path, sort_order, duration, animation, caption) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(photo.id, photo.project_id, photo.file_path, photo.sort_order, photo.duration || 5, photo.animation || "ken_burns", photo.caption || null);
+  },
+
+  async getProjectPhotos(projectId: string) {
+    if (IS_VERCEL) {
+      const { data } = await getSupabase()
+        .from("project_photos")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("sort_order", { ascending: true });
+      return data ?? [];
+    }
+    return getSqliteDb().prepare("SELECT * FROM project_photos WHERE project_id = ? ORDER BY sort_order").all(projectId);
+  },
+
+  async deletePhoto(id: string) {
+    if (IS_VERCEL) {
+      await getSupabase().from("project_photos").delete().eq("id", id);
+      return;
+    }
+    getSqliteDb().prepare("DELETE FROM project_photos WHERE id = ?").run(id);
+  },
+
+  async updatePhotoOrder(photos: { id: string; sort_order: number }[]) {
+    if (IS_VERCEL) {
+      for (const p of photos) {
+        await getSupabase().from("project_photos").update({ sort_order: p.sort_order }).eq("id", p.id);
+      }
+      return;
+    }
+    const stmt = getSqliteDb().prepare("UPDATE project_photos SET sort_order = ? WHERE id = ?");
+    for (const p of photos) {
+      stmt.run(p.sort_order, p.id);
+    }
+  },
+
+  // ── Music Suggestions ───────────────────────────────────────────────────
+
+  async saveMusicSuggestion(data: { id: string; project_id: string; suggestions: string; reasoning: string }) {
+    if (IS_VERCEL) {
+      await getSupabase().from("music_suggestions").insert(data);
+      return;
+    }
+    getSqliteDb().prepare(
+      "INSERT INTO music_suggestions (id, project_id, suggestions, reasoning) VALUES (?, ?, ?, ?)"
+    ).run(data.id, data.project_id, data.suggestions, data.reasoning);
   },
 };
 
